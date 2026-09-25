@@ -1,6 +1,7 @@
 # Name_313
 Репозиторий для тренировочного проекта юного химика :)
 
+
 ## Данные 💾
 Используемый в проекте датасет был взят с **[Kaggle](https://www.kaggle.com/datasets/deepashukla/unified-credit-and-carbon-dataset-for-rural-ai?resource=download)** , а для скачивания доступен по следующей ссылке:
 

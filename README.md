@@ -6,5 +6,6 @@
 
 **[Unified Credit & Carbon Dataset for Rural AI (Google Drive)](https://drive.google.com/file/d/10zWddY15usCdpocAaw-xI-Ixy0sHwi8w/view?usp=drive_link)**
 
+
 ## Инструменты 🔧
 В процессе работы над проектом используется приложение **Hermie App** (vX.X), предоставленное в рамках курса.

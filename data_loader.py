@@ -1,37 +1,40 @@
 import pandas as pd
+import gdown
+import os
 
-def load_dataset(file_id):
+def load_dataset(file_id, output_filename='synthetic_dataset.csv'):
     """
     Функция для загрузки датасета с Google Диска.
-    
-    Args:
-        file_id (str): ID файла на Google Диске.
-    
-    Returns:
-        pd.DataFrame: Загруженный датасет.
     """
-    url = f'https://drive.google.com/uc?export=download&id={file_id}'
-    df = pd.read_csv(url)
+    # Проверяем, скачан ли уже файл
+    if not os.path.exists(output_filename):
+        print("Файл не найден. Скачиваем с Google Диска...")
+        url = f'https://drive.google.com/uc?id={file_id}'
+        gdown.download(url, output_filename, quiet=False)
+        print("Загрузка завершена!")
+    else:
+        print(f"Файл '{output_filename}' уже существует. Пропускаем скачивание.")
+        
+    # Читаем скачанный файл
+    df = pd.read_csv(output_filename)
     return df
 
 def preview_data(df, n=10):
     """
-    Выводит первые n строк датасета и его размер.
-    
-    Args:
-        df (pd.DataFrame): Исходный датасет.
-        n (int): Количество строк для вывода.
+    Выводит первые n строк датасета.
     """
-    print(f"Размер: {df.shape[0]} строк, {df.shape[1]} столбцов\n")
     print(f"Первые {n} строк датасета:")
     print(df.head(n))
 
 if __name__ == '__main__':
-    # ID вашего файла на Google Диске
+    # ID файла на Google Диске
     FILE_ID = '10zWddY15usCdpocAaw-xI-Ixy0sHwi8w'
     
     # Загружаем данные
     dataset = load_dataset(FILE_ID)
     
-    # Выводим результат
+    # Вывод размеров датасета
+    print(f"Размер: {dataset.shape[0]} строк, {dataset.shape[1]} столбцов\n")
+    
+    # Вывод первых 10-ти строк
     preview_data(dataset, n=10)

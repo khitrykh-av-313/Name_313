@@ -6,7 +6,6 @@ def load_dataset(file_id, output_filename='synthetic_dataset.csv'):
     """
     Функция для загрузки датасета с Google Диска.
     """
-    # Проверяем, скачан ли уже файл
     if not os.path.exists(output_filename):
         print("Файл не найден. Скачиваем с Google Диска...")
         url = f'https://drive.google.com/uc?id={file_id}'
@@ -14,8 +13,7 @@ def load_dataset(file_id, output_filename='synthetic_dataset.csv'):
         print("Загрузка завершена!")
     else:
         print(f"Файл '{output_filename}' уже существует. Пропускаем скачивание.")
-        
-    # Читаем скачанный файл
+
     df = pd.read_csv(output_filename)
     return df
 
@@ -36,14 +34,14 @@ def convert_types(df):
     for col in cat_cols:
         if col in df.columns:
             df[col] = df[col].astype('category')
-    
-    # Сносим формат совсем, позволяя Pandas самому определить даты
+
     if 'timestamp' in df.columns:
+        nulls_before = df['timestamp'].isna().sum()
         df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-        nat_count = df['timestamp'].isna().sum()
-        if nat_count > 0:
-            print(f"⚠️ Внимание: {nat_count} дат не удалось распознать. Они заменены на NaT.")
-            
+        bad_count = df['timestamp'].isna().sum() - nulls_before
+        if bad_count > 0:
+            print(f"⚠️ Внимание: {bad_count} дат не удалось распознать. Они заменены на NaT.")
+
     return df
 
 
@@ -56,18 +54,12 @@ def save_to_parquet(df, output_filename='synthetic_dataset.parquet'):
 
 
 if __name__ == '__main__':
-    # ID файла на Google Диске
     FILE_ID = '10zWddY15usCdpocAaw-xI-Ixy0sHwi8w'
-    
-    # Загружаем данные
-    dataset = load_dataset(FILE_ID)
-    
-    # Вывод размеров датасета
-    print(f"Размер: {dataset.shape[0]} строк, {dataset.shape[1]} столбцов\n")
-    
-    # Вывод первых 10-ти строк
-    preview_data(dataset, n=10)
 
-    # Приводим типы и сохраняем в Parquet
+    dataset = load_dataset(FILE_ID)
+
+    print(f"Размер: {dataset.shape[0]} строк, {dataset.shape[1]} столбцов\n")
+
+    preview_data(dataset, n=10)
     dataset = convert_types(dataset)
     save_to_parquet(dataset)

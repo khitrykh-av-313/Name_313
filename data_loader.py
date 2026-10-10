@@ -26,6 +26,23 @@ def preview_data(df, n=10):
     print(f"Первые {n} строк датасета:")
     print(df.head(n))
 
+def convert_types(df):
+    """
+    Приводит типы данных датасета к правильным.
+    """
+    cat_cols = ['gender', 'education_level', 'season', 'soil_texture', 'land_cover_type', 'soc_class_label']
+    for col in cat_cols:
+        df[col] = df[col].astype('category')
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    return df
+
+def save_to_parquet(df, output_filename='synthetic_dataset.parquet'):
+    """
+    Сохраняет DataFrame в формат Parquet.
+    """
+    df.to_parquet(output_filename, index=False)
+    print("Сохранение в Parquet завершено!")
+
 if __name__ == '__main__':
     # ID файла на Google Диске
     FILE_ID = '10zWddY15usCdpocAaw-xI-Ixy0sHwi8w'
@@ -38,3 +55,7 @@ if __name__ == '__main__':
     
     # Вывод первых 10-ти строк
     preview_data(dataset, n=10)
+
+    # Приводим типы и сохраняем в Parquet
+    dataset = convert_types(dataset)
+    save_to_parquet(dataset)

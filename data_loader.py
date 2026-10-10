@@ -26,14 +26,21 @@ def preview_data(df, n=10):
     print(f"Первые {n} строк датасета:")
     print(df.head(n))
 
+
 def convert_types(df):
     """
     Приводит типы данных датасета к правильным.
     """
+    # Проверяем наличие колонок перед изменением типа
     cat_cols = ['gender', 'education_level', 'season', 'soil_texture', 'land_cover_type', 'soc_class_label']
     for col in cat_cols:
-        df[col] = df[col].astype('category')
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+        if col in df.columns:
+            df[col] = df[col].astype('category')
+    
+    # Сносим format совсем, позволяя Pandas самому определить даты
+    if 'timestamp' in df.columns:
+        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+        
     return df
 
 def save_to_parquet(df, output_filename='synthetic_dataset.parquet'):

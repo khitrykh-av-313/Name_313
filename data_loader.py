@@ -40,7 +40,7 @@ def convert_types(df):
         df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
         bad_count = df['timestamp'].isna().sum() - nulls_before
         if bad_count > 0:
-            print(f"⚠️ Внимание: {bad_count} дат не удалось распознать. Они заменены на NaT.")
+            print(f"Внимание: {bad_count} дат не удалось распознать. Они заменены на NaT.")
 
     return df
 

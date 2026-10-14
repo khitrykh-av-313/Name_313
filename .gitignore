@@ -1,3 +1,4 @@
 # Игнорировать данные
 synthetic_dataset.csv
 *.parquet
+coffee_varieties.csv

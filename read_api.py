@@ -2,15 +2,6 @@ import concurrent.futures
 import logging
 import sys
 import time
-from typing import Any, Dict, List, Optional
-
-import pandas as pd
-import requests
-
-import concurrent.futures
-import logging
-import sys
-import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -71,14 +62,13 @@ def collect_dataset() -> pd.DataFrame:
     
     varieties, has_error = fetch_all_pages("varieties")
     if has_error:
-        # Если пагинация упала, прерываем работу
+        # Останавливаем работу, чтобы не сохранять неполные данные
         raise RuntimeError("Не удалось загрузить полный список сортов из-за сетевой ошибки.")
 
     slugs = [var.get("slug") for var in varieties if var.get("slug")]
     total_slugs = len(slugs)
     logging.info("Найдено сортов: %d", total_slugs)
 
-    # Список полей (вынесли из цикла)
     fields = [
         "slug", "name", "species", "description", "genetic_group",
         "altitude_min", "altitude_max", "quality_rating"
@@ -92,7 +82,6 @@ def collect_dataset() -> pd.DataFrame:
         future_to_slug = {executor.submit(fetch_variety_detail, slug): slug for slug in slugs}
 
         for i, future in enumerate(concurrent.futures.as_completed(future_to_slug), 1):
-            # Логируем не каждый шаг, а раз в 10 итераций
             if i % 10 == 0 or i == total_slugs:
                 logging.info("[%d/%d] Обработано сортов...", i, total_slugs)
                 
@@ -113,7 +102,6 @@ def collect_dataset() -> pd.DataFrame:
 
     df = pd.DataFrame(records)
     
-    # Приводим числовые колонки к числам
     for col in ["altitude_min", "altitude_max", "quality_rating"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")

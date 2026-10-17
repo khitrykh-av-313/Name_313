@@ -90,7 +90,7 @@
    ```
 3. Запустите скрипт для сбора данных из API:
    ```
-   python scripts/read_api.py
+   python read_api.py
    ```
 
 ### Ожидаемый результат :sparkles:

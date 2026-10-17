@@ -2,7 +2,7 @@ import concurrent.futures
 import logging
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import requests
@@ -20,8 +20,8 @@ BASE_URL = "https://brewfyi.com/api/v1"
 def fetch_all_pages(endpoint: str) -> List[Dict[str, Any]]:
     """Собирает данные со всех страниц API."""
     results: List[Dict[str, Any]] = []
-    # Исправлено под Python 3.8+ (Optional вместо |)
     url: Optional[str] = f"{BASE_URL}/{endpoint}/"
+    has_error = False
 
     while url:
         logging.info("Запрос списка: %s", url)
@@ -31,11 +31,15 @@ def fetch_all_pages(endpoint: str) -> List[Dict[str, Any]]:
             data = response.json()
         except requests.exceptions.RequestException as e:
             logging.error("Ошибка при запросе к API: %s", e)
+            has_error = True
             break
 
         results.extend(data.get("results", []))
         url = data.get("next")
         time.sleep(0.2)
+
+    if has_error:
+        logging.warning("Сбор данных прерван из-за ошибки сети. Получен частичный список!")
 
     return results
 
@@ -61,27 +65,25 @@ def collect_dataset() -> pd.DataFrame:
     logging.info("Найдено сортов: %d", total_slugs)
 
     records: List[Dict[str, Any]] = []
-    failed_slugs = 0  # Счетчик неудачных запросов
+    failed_slugs = 0
 
     logging.info("Запускаем параллельную загрузку деталей...")
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_to_slug = {executor.submit(fetch_variety_detail, slug): slug for slug in slugs}
 
-        for future in concurrent.futures.as_completed(future_to_slug):
+        # Лог прогресса
+        for i, future in enumerate(concurrent.futures.as_completed(future_to_slug), 1):
             slug = future_to_slug[future]
             try:
                 detail = future.result()
                 if detail:
-                    record = {
-                        "slug": detail.get("slug"),
-                        "name": detail.get("name"),
-                        "species": detail.get("species"),
-                        "description": detail.get("description"),
-                        "genetic_group": detail.get("genetic_group"),
-                        "altitude_min": detail.get("altitude_min"),
-                        "altitude_max": detail.get("altitude_max"),
-                        "quality_rating": detail.get("quality_rating"),
-                    }
+                    logging.info("[%d/%d] Получен: %s", i, total_slugs, slug)
+                    fields = [
+                        "slug", "name", "species", "description", "genetic_group",
+                        "altitude_min", "altitude_max", "quality_rating"
+                    ]
+                    # Компактный сбор полей через comprehension (двойные кавычки)
+                    record = {field: detail.get(field) for field in fields}
                     records.append(record)
                 else:
                     failed_slugs += 1
@@ -95,9 +97,9 @@ def collect_dataset() -> pd.DataFrame:
     df = pd.DataFrame(records)
     
     # Приводим числовые колонки к числам
-    for col in ['altitude_min', 'altitude_max', 'quality_rating']:
+    for col in ["altitude_min", "altitude_max", "quality_rating"]:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
     return df
 
@@ -112,7 +114,7 @@ def main() -> None:
 
     logging.info("Успешно собрано записей: %d", len(df))
 
-    preview_df = df.drop(columns=['description']).head(10)
+    preview_df = df.drop(columns=["description"]).head(10)
     logging.info("Первые 10 строк (без description):\n%s", preview_df.to_string())
 
     output_filename = "coffee_varieties.csv"

@@ -7,6 +7,15 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import requests
 
+import concurrent.futures
+import logging
+import sys
+import time
+from typing import Any, Dict, List, Optional, Tuple
+
+import pandas as pd
+import requests
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -17,8 +26,11 @@ logging.basicConfig(
 BASE_URL = "https://brewfyi.com/api/v1"
 
 
-def fetch_all_pages(endpoint: str) -> List[Dict[str, Any]]:
-    """Собирает данные со всех страниц API."""
+def fetch_all_pages(endpoint: str) -> Tuple[List[Dict[str, Any]], bool]:
+    """
+    Собирает данные со всех страниц API.
+    Возвращает список данных и флаг наличия ошибок.
+    """
     results: List[Dict[str, Any]] = []
     url: Optional[str] = f"{BASE_URL}/{endpoint}/"
     has_error = False
@@ -38,10 +50,7 @@ def fetch_all_pages(endpoint: str) -> List[Dict[str, Any]]:
         url = data.get("next")
         time.sleep(0.2)
 
-    if has_error:
-        logging.warning("Сбор данных прерван из-за ошибки сети. Получен частичный список!")
-
-    return results
+    return results, has_error
 
 
 def fetch_variety_detail(slug: str) -> Dict[str, Any]:
@@ -59,11 +68,22 @@ def fetch_variety_detail(slug: str) -> Dict[str, Any]:
 def collect_dataset() -> pd.DataFrame:
     """Собирает датасет из данных API, используя многопоточность."""
     logging.info("Начинаем сбор данных о сортах кофе...")
-    varieties = fetch_all_pages("varieties")
+    
+    varieties, has_error = fetch_all_pages("varieties")
+    if has_error:
+        # Если пагинация упала, прерываем работу
+        raise RuntimeError("Не удалось загрузить полный список сортов из-за сетевой ошибки.")
+
     slugs = [var.get("slug") for var in varieties if var.get("slug")]
     total_slugs = len(slugs)
     logging.info("Найдено сортов: %d", total_slugs)
 
+    # Список полей (вынесли из цикла)
+    fields = [
+        "slug", "name", "species", "description", "genetic_group",
+        "altitude_min", "altitude_max", "quality_rating"
+    ]
+    
     records: List[Dict[str, Any]] = []
     failed_slugs = 0
 
@@ -71,18 +91,15 @@ def collect_dataset() -> pd.DataFrame:
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_to_slug = {executor.submit(fetch_variety_detail, slug): slug for slug in slugs}
 
-        # Лог прогресса
         for i, future in enumerate(concurrent.futures.as_completed(future_to_slug), 1):
+            # Логируем не каждый шаг, а раз в 10 итераций
+            if i % 10 == 0 or i == total_slugs:
+                logging.info("[%d/%d] Обработано сортов...", i, total_slugs)
+                
             slug = future_to_slug[future]
             try:
                 detail = future.result()
                 if detail:
-                    logging.info("[%d/%d] Получен: %s", i, total_slugs, slug)
-                    fields = [
-                        "slug", "name", "species", "description", "genetic_group",
-                        "altitude_min", "altitude_max", "quality_rating"
-                    ]
-                    # Компактный сбор полей через comprehension (двойные кавычки)
                     record = {field: detail.get(field) for field in fields}
                     records.append(record)
                 else:
@@ -106,7 +123,11 @@ def collect_dataset() -> pd.DataFrame:
 
 def main() -> None:
     """Основная функция запуска скрипта."""
-    df = collect_dataset()
+    try:
+        df = collect_dataset()
+    except RuntimeError as e:
+        logging.error("Критическая ошибка: %s", e)
+        sys.exit(1)
 
     if df.empty:
         logging.error("Не удалось собрать данные. Датасет пуст.")

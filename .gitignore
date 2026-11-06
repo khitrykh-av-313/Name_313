@@ -2,3 +2,4 @@
 synthetic_dataset.csv
 coffee_varieties.csv
 *.parquet
+creds.db

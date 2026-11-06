@@ -2,3 +2,4 @@ pandas
 gdown
 pyarrow
 requests
+sqlalchemy

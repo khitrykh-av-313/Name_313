@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import gdown
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 # ВСЕ ПУТИ
@@ -63,28 +63,30 @@ def load_data():
 
 def upload_to_postgres(df):
     """
-    Подключается к удаленной БД и загружает данные.
+    Подключается к удаленной БД, загружает данные и добавляет Primary Key.
     """
     try:
         db_url, db_port, db_user, db_pass, db_name = get_homeworks_credentials()
-        print("Учетные данные получены из creds.db.")
+        print("Учетные данные успешно получены из creds.db.")
     except Exception as e:
         print(f"Критическая ошибка получения доступов: {e}")
         return
 
-        # Формируем строку подключения
     connection_string = f"postgresql+psycopg2://{db_user}:{db_pass}@{db_url}:{db_port}/{db_name}"
     
     try:
-        # Создаем движок подключения
         engine = create_engine(connection_string)
-        
         print(f"Подключаемся к БД {db_name} на сервере {db_url}...")
         
-        # Записываем датафрейм в базу
-        df.to_sql(TABLE_NAME, con=engine, if_exists='replace', index=False)
-        
-        print(f"Успех! {len(df)} строк записаны в таблицу '{TABLE_NAME}'.")
+        # 1. Записываем данные
+        with engine.begin() as conn:
+            df.to_sql(TABLE_NAME, con=conn, if_exists='replace', index=False)
+            print(f"Данные ({len(df)} строк) успешно загружены в таблицу '{TABLE_NAME}'.")
+            
+            # 2. Сразу добавляем первичный ключ
+            alter_query = text(f'ALTER TABLE "{TABLE_NAME}" ADD PRIMARY KEY (household_id);')
+            conn.execute(alter_query)
+            print(f"Первичный ключ (household_id) успешно добавлен в таблицу '{TABLE_NAME}'.")
         
     except SQLAlchemyError as e:
         print(f"Ошибка при записи в базу данных: {e}")

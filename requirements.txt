@@ -2,5 +2,5 @@ pandas
 gdown
 pyarrow
 requests
-sqlite3
+sqlalchemy
 psycopg2-binary

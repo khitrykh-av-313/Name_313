@@ -1,6 +1,6 @@
 import sqlite3
 import os
-import sys 
+import sys
 import pandas as pd
 import gdown
 from sqlalchemy import create_engine, text
@@ -100,7 +100,6 @@ def upload_to_postgres(df):
             print(f"Первичный ключ (household_id) успешно добавлен в таблицу '{TABLE_NAME}'.")
         
     except SQLAlchemyError as e:
-        print(f"Ошибка при записи в базу данных: {e}")
         raise
 
 if __name__ == '__main__':

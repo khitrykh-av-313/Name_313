@@ -1,7 +1,10 @@
+import sqlite3
 import os
+import sys 
 import pandas as pd
 import gdown
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import URL
 from sqlalchemy.exc import SQLAlchemyError
 
 # ВСЕ ПУТИ
@@ -17,7 +20,7 @@ def get_homeworks_credentials():
     Читает логин и пароль для базы homeworks из локального файла creds.db.
     """
     if not os.path.exists(CREDS_DB_PATH):
-        raise FileNotFoundError(f"Файл {CREDS_DB_PATH} не найден. Положите его в папку scripts или измените путь.")
+        raise FileNotFoundError(f"Файл {CREDS_DB_PATH} не найден. Положите его в корень проекта.")
 
     try:
         with sqlite3.connect(CREDS_DB_PATH) as conn:
@@ -72,32 +75,40 @@ def upload_to_postgres(df):
         print(f"Критическая ошибка получения доступов: {e}")
         return
 
-    connection_string = f"postgresql+psycopg2://{db_user}:{db_pass}@{db_url}:{db_port}/{db_name}"
-    
+    # Безопасное создание объекта подключения
+    url_object = URL.create(
+        "postgresql+psycopg2",
+        username=db_user,
+        password=db_pass,
+        host=db_url,
+        port=db_port,
+        database=db_name,
+    )
+
     try:
-        engine = create_engine(connection_string)
+        engine = create_engine(url_object)
         print(f"Подключаемся к БД {db_name} на сервере {db_url}...")
         
-        # 1. Записываем данные
         with engine.begin() as conn:
+            # if_exists='replace' выбран намеренно: это позволяет многократно запускать скрипт
             df.to_sql(TABLE_NAME, con=conn, if_exists='replace', index=False)
             print(f"Данные ({len(df)} строк) успешно загружены в таблицу '{TABLE_NAME}'.")
             
-            # 2. Сразу добавляем первичный ключ
+            # Добавляем первичный ключ
             alter_query = text(f'ALTER TABLE "{TABLE_NAME}" ADD PRIMARY KEY (household_id);')
             conn.execute(alter_query)
             print(f"Первичный ключ (household_id) успешно добавлен в таблицу '{TABLE_NAME}'.")
         
     except SQLAlchemyError as e:
         print(f"Ошибка при записи в базу данных: {e}")
-        print("Проверьте правильность подключения и прав доступа.")
+        raise
 
 if __name__ == '__main__':
     print("Начинаем процесс...")
-    
-    # 1. Загружаем данные
-    dataset = load_data()
-    
-    # 2. Если данные загрузились, отправляем в БД
-    if dataset is not None:
-        upload_to_postgres(dataset)
+    try:
+        dataset = load_data()
+        if dataset is not None:
+            upload_to_postgres(dataset)
+    except Exception as e:
+        print(f"Критическая ошибка выполнения: {e}")
+        sys.exit(1)

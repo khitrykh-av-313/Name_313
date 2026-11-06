@@ -3,3 +3,4 @@ gdown
 pyarrow
 requests
 sqlite3
+psycopg2-binary

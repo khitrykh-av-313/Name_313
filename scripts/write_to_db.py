@@ -13,7 +13,7 @@ DATA_PATH = 'synthetic_dataset.csv'
 FILE_ID = '10zWddY15usCdpocAaw-xI-Ixy0sHwi8w'
 LIMIT_ROWS = 100
 
-TABLE_NAME = 'Khitrykh_Alyona' 
+TABLE_NAME = 'khitrykhav'
 
 def get_homeworks_credentials():
     """

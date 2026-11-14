@@ -2,6 +2,7 @@ import pandas as pd
 import gdown
 import os
 
+
 def load_dataset(file_id, output_filename='synthetic_dataset.csv'):
     """
     Функция для загрузки датасета с Google Диска.

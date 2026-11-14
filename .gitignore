@@ -1,5 +1,15 @@
 # Игнорировать данные
 synthetic_dataset.csv
 coffee_varieties.csv
-*.parquet
 creds.db
+Thumbs.db
+*.parquet
+*.xlsx
+*.db
+*.sqlite
+.venv/
+env/
+.env
+.idea/
+.vscode/
+data/
